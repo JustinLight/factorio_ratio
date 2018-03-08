@@ -20,10 +20,12 @@ def recipe_find(request):
     l=recipes.loc[request, :] #pull row with restested recipe
     recipe_dict = dict(zip(z,l)) #create dict with header for key and recipe line as values
     fr_dict = {k:v for (k,v) in recipe_dict.items() if v>0} #remove keys if value is 0, not used in recipe
+    rtime=fr_dict['Time']
+    rout=fr_dict['Output']
     cps=fr_dict.pop('Output')/fr_dict.pop('Time') #calculate how maybe of request can be made per second and remove from dict
     item_list = 'You can craft ' +str(cps)+' '+request+' per second.\nEvery second you will need:\n' #create variable with start of string for output
     for k,v in fr_dict.items(): #calculate items created per assembling machine (currently only 1 per second with no speed changes)
-        item_list+=str(v*cps)+' '+str(k)+'\n'
+        item_list+=str((v*cps)/rout)+' '+str(k)+'\n'
 
     fr_dict = {k:v for (k,v) in fr_dict.items() if base_mat.count(k)==0} #remove base materials from dict
     furnace_output='\n---Furnace Production---\n'
@@ -31,25 +33,21 @@ def recipe_find(request):
         fo=recipes.loc[kf,:]
         furnace_dict=dict(zip(z,fo))
         furnace_dict={k:v for (k,v) in furnace_dict.items() if v>0}
+        ftime=furnace_dict['Time']
+        fout=furnace_dict['Output']
         fps=furnace_dict.pop('Output')/furnace_dict.pop('Time')
+        ore=str(list(furnace_dict.keys()))
+        ore=ore[2:]
+        ore=ore[:-2]
         nonlocal furnace_output
-        furnace_output+='To craft '+str(vf*cps)+' '+kf +' per second, you will need:\n'
-        print(furnace_dict)
-        print(kf)
-        print(furnace_dict.keys())
+        global furnace
+        furnace_output+='To craft '+str(vf*cps/rout)+' '+kf +' per second, you will need:\n' + str(furnace_dict[ore]*cps/rout)+' '+ ore+' per second, and ' + str((vf*cps/rout)*ftime/f[furnace])+' furnaces'
+        if kf=='Steel plate':
+            furnace_output+='\n To craft '+str(furnace_dict[ore]*cps/rout)+' '+ ore+' per second, you will need ' + str(furnace_dict[ore]*cps/rout)+ ' iron ore per second and '+ str(3.5*furnace_dict[ore]*cps/rout/f[furnace])+' furnaces.'
     for (k,v) in fr_dict.items():
         if k in furnace_mat: #calculate steel plate production
             furnace(k,v)
-    if "Iron plate" in fr_dict: #calculate iron plate production
-        item_list+='To craft '+str(fr_dict['Iron plate']*cps)+' iron plates per second, you will need:\n'+str(fr_dict['Iron plate']*cps)+' iron ore per second smelted in ' + str(fr_dict['Iron plate']*cps/(1/3.5)/f[furnace])+ ' '+furnace+ ' furnace\n'
-        del fr_dict['Iron plate']
-    if "Copper plate" in fr_dict: #calculate copper plate production
-        item_list+='To craft '+str(fr_dict['Copper plate']*cps)+' copper plates per second, you will need:\n'+str(fr_dict['Copper plate']*cps)+' copper ore per second smelted in ' + str(fr_dict['Copper plate']*cps/(1/3.5)/f[furnace])+ ' '+furnace+ ' furnace\n'
-        del fr_dict['Copper plate']
-    if "Stone brick" in fr_dict: #calculate stone brick production
-        item_list+='To craft '+str(fr_dict['Stone brick']*cps)+' stone brick per second, you will need:\n'+str(fr_dict['Stone brick']*cps*2)+' stone per second smelted in ' + str(fr_dict['Stone brick']*cps/(1/3.5)/f[furnace])+ ' '+furnace+ ' furnace\n'
-        del fr_dict['Stone brick']
-    print(fr_dict)
+
     item_list+=furnace_output
     return(item_list)
 
